@@ -101,17 +101,17 @@ body { background-color: var(--bg); margin: 0; padding: 0; display: flex; justif
     border-bottom: 1px solid var(--border);
     margin-top: 15px;
     margin-bottom: 10px;
-    /* Keeps items on one line */
     display: flex;
     flex-direction: row;
     align-items: center;
 }
 
 .total-credit-grey {
-    color: #888; /* Grey plain text */
+    color: #888;
     font-size: 1rem;
     font-weight: 500;
-    margin-left: 4px; /* Tiny space for "~" to look clean */
+    margin-left: 8px;
+    cursor: pointer;
 }
 
 .customer-box { background: var(--card); padding: 18px; border-radius: 12px; margin-bottom: 12px; border: 1px solid var(--border); scroll-margin-top: 150px; }
@@ -193,14 +193,15 @@ function togglePrivacy() {
 }
 
 function searchCustomer() {
-    const query = document.getElementById('customerSearch').value.toLowerCase();
+    const query = document.getElementById('customerSearch').value.toLowerCase().trim();
     const resultsDiv = document.getElementById('searchResults');
     resultsDiv.innerHTML = '';
+    
     if (query.length < 1) { 
         resultsDiv.style.display = 'none'; 
-        if(singleViewId) { singleViewId = null; updateUI(); }
         return; 
     }
+
     const filtered = customers.filter(c => c.name.toLowerCase().includes(query));
     if (filtered.length > 0) {
         resultsDiv.style.display = 'block';
@@ -208,7 +209,7 @@ function searchCustomer() {
             const row = document.createElement('div');
             row.textContent = c.name;
             row.onclick = () => {
-                singleViewId = c.id;
+                singleViewId = c.id; // Lock to the specific customer ID found
                 isHidden = false; 
                 document.getElementById('privacy-toggle').textContent = '❌';
                 resultsDiv.style.display = 'none';
@@ -223,7 +224,11 @@ function searchCustomer() {
 function updateUI() {
     const total = customers.reduce((sum, c) => sum + c.total, 0);
     const div = document.getElementById('customer-list');
+    const searchBar = document.getElementById('customerSearch');
+    searchBar.placeholder = `🔍 Search ${customers.length} Customers...`;
+    
     div.innerHTML = '';
+    // Always sort by name for alphabetical order
     customers.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
 
     const nav = document.getElementById('alpha-nav');
@@ -243,19 +248,17 @@ function updateUI() {
 
     let lastLetter = '';
     customers.forEach((c) => {
-        if (singleViewId && c.id !== singleViewId) return;
-        if (isHidden && !singleViewId) return;
+        // FIX: Strict check. If we are in single view, hide EVERYONE except the target ID.
+        if (singleViewId !== null && c.id !== singleViewId) return;
+        if (isHidden && singleViewId === null) return;
 
         let currentLetter = c.name.trim().charAt(0).toUpperCase();
         if (!/[A-Z]/.test(currentLetter)) currentLetter = '#';
 
-        if (currentLetter !== lastLetter && !singleViewId) {
+        if (currentLetter !== lastLetter && singleViewId === null) {
             const anchorId = currentLetter === '#' ? 'letter-HASH' : `letter-${currentLetter}`;
-            const totalDisplay = isHidden ? "~****" : `~${formatAmount(Math.round(total))}`;
-            
-            // Layout: Alphabet Header, then Grey Text on same line
-            const summaryText = lastLetter === '' ? `<span class="total-credit-grey">${totalDisplay}</span>` : '';
-            
+            const totalDisplay = isHidden ? "~ ****" : `~ ${formatAmount(Math.round(total))}`;
+            const summaryText = lastLetter === '' ? `<span class="total-credit-grey" ondblclick="showLastUpdate()">${totalDisplay}</span>` : '';
             div.innerHTML += `<div id="${anchorId}" class="letter-header"><span>${currentLetter}</span>${summaryText}</div>`;
             lastLetter = currentLetter;
         }
@@ -263,7 +266,7 @@ function updateUI() {
         div.innerHTML += `
             <div class="customer-box" id="cust-${c.id}">
                 <div class="customer-name" ondblclick="editCustomer(${c.id})">${c.name}</div>
-                <div class="total-amount" onclick="deleteTracker(${c.id})">Rs. ${formatAmount(Math.round(c.total))}</div>
+                <div class="total-amount" onclick="deleteTracker(${c.id})">${isHidden ? "Rs. ****" : "Rs. " + formatAmount(Math.round(c.total))}</div>
                 <input type="number" id="input-${c.id}" class="input-box" placeholder="Enter amount">
                 <div class="button-group">
                     <button class="btn btn-add" onclick="updateBill(${c.id}, 'add')">Add Bill</button>
@@ -272,9 +275,18 @@ function updateUI() {
             </div>`;
     });
 
-    if (singleViewId) {
-        div.innerHTML += `<button class="btn btn-backup" style="width:100%; margin-top:10px" onclick="singleViewId=null; updateUI();">Show All</button>`;
+    if (singleViewId !== null) {
+        div.innerHTML += `<button class="btn btn-backup" style="width:100%; margin-top:10px" onclick="clearSearch()">Show All Customers</button>`;
     }
+}
+
+function clearSearch() {
+    singleViewId = null;
+    updateUI();
+}
+
+function showLastUpdate() {
+    alert(`Last Update: ${lastUpdateInfo.name}\nAt: ${lastUpdateInfo.time}`);
 }
 
 function addNewCustomer() {
@@ -292,10 +304,12 @@ function updateBill(id, action) {
     const c = customers.find(x => x.id === id);
     c.total += action === 'add' ? amt : -amt;
     const now = new Date();
-    lastUpdateInfo = { name: c.name, time: `${now.toLocaleDateString()} ${now.toLocaleTimeString()}` };
+    lastUpdateInfo = { name: c.name, time: `${now.toLocaleDateString()} ${now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` };
     save(); downloadBackupFile();
     if (/^\d+$/.test(c.phone) && c.phone !== "0") {
-        let msg = action === 'receive' ? `Dear ${c.name}, Rs. ${formatAmount(amt)} received. Bal: Rs. ${formatAmount(c.total)}` : `Dear ${c.name}, Rs. ${formatAmount(amt)} added. Bal: Rs. ${formatAmount(c.total)}`;
+        let msg = action === 'receive' ? 
+            `Dear ${c.name},\nRs. ${formatAmount(amt)} has been received from your account at AH Sweets.\nYour updated bill is Rs. ${formatAmount(c.total)}` : 
+            `Dear ${c.name},\nRs. ${formatAmount(amt)} has been added to your account at AH Sweets.\nYour updated bill is Rs. ${formatAmount(c.total)}`;
         window.open(`sms:+92${c.phone.startsWith('0')?c.phone.substring(1):c.phone}?body=${encodeURIComponent(msg)}`);
     }
 }
@@ -305,7 +319,16 @@ function downloadBackupFile() {
     const backupText = `META|${lastUpdateInfo.name}|${lastUpdateInfo.time}\n` + customers.map(c => `${c.name},${c.phone},${c.total}`).join('\n');
     const dataUri = 'data:text/plain;charset=utf-8,' + encodeURIComponent(backupText);
     const now = new Date();
-    const fileName = `Candy-${now.getDate()}-${now.getMonth()+1}-${now.getFullYear()}.txt`;
+    const dd = String(now.getDate()).padStart(2, '0');
+    const monthNames = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+    const mon = monthNames[now.getMonth()];
+    let hh = now.getHours();
+    const ampm = hh >= 12 ? 'p' : 'a';
+    hh = hh % 12; hh = hh ? hh : 12; 
+    const hStr = String(hh).padStart(2, '0');
+    const min = String(now.getMinutes()).padStart(2, '0');
+    const ss = String(now.getSeconds()).padStart(2, '0');
+    const fileName = `Candy.${dd}.${mon}.${hStr}.${min}.${ss}.${ampm}.txt`;
     const link = document.createElement('a');
     link.setAttribute('href', dataUri); link.setAttribute('download', fileName);
     document.body.appendChild(link); link.click(); document.body.removeChild(link);
@@ -323,7 +346,7 @@ function restoreFromFile(event) {
         }
         customers = lines.slice(start).map(l => {
             const p = l.split(',');
-            return { id: Date.now() + Math.random(), name: p[0], phone: p[1] || "n", total: parseFloat(p[2]) || 0 };
+            return { id: parseFloat(p[3]) || Date.now() + Math.random(), name: p[0], phone: p[1] || "n", total: parseFloat(p[2]) || 0 };
         });
         save();
     };
@@ -332,21 +355,31 @@ function restoreFromFile(event) {
 
 function deleteTracker(id) {
     const now = Date.now();
+    const c = customers.find(x => x.id === id);
     if (!totalClickTracker[id]) { totalClickTracker[id] = { count: 1, time: now }; return; }
     if (now - totalClickTracker[id].time < 1500) totalClickTracker[id].count++;
     else totalClickTracker[id].count = 1;
     totalClickTracker[id].time = now;
     if (totalClickTracker[id].count >= 5) {
-        if (confirm("Delete?")) { customers = customers.filter(c => c.id !== id); save(); downloadBackupFile(); }
+        if (confirm(`Delete ${c.name} ?`)) { 
+            customers = customers.filter(cust => cust.id !== id); 
+            singleViewId = null; // Reset view after delete
+            save(); 
+            downloadBackupFile(); 
+        }
         totalClickTracker[id].count = 0;
     }
 }
 
 function editCustomer(id) {
     const c = customers.find(x => x.id === id);
-    const n = prompt("Name", c.name);
-    const p = prompt("Phone", c.phone);
-    if (n) { c.name = n; c.phone = p || "n"; save(); }
+    const n = prompt("Edit Name", c.name);
+    const p = prompt("Edit Phone", c.phone);
+    if (n !== null) { 
+        c.name = n.trim() || c.name; 
+        c.phone = p !== null ? p.trim() : c.phone; 
+        save(); 
+    }
 }
 
 updateUI();
