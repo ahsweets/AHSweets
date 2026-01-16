@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>AH Sweets Management</title>
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1e1e1e">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
@@ -59,13 +59,14 @@ body { background-color: var(--bg); margin: 0; padding: 0; display: flex; justif
 .search-results {
     background: #333;
     border-radius: 0 0 10px 10px;
-    max-height: 200px;
+    max-height: 250px;
     overflow-y: auto;
     display: none;
     border: 1px solid var(--border);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
 }
 
-.search-results div { padding: 12px; border-bottom: 1px solid var(--border); cursor: pointer; }
+.search-results div { padding: 12px; border-bottom: 1px solid var(--border); cursor: pointer; color: var(--success); }
 
 .stats-grid { margin-bottom: 20px; cursor: pointer; }
 
@@ -112,7 +113,7 @@ body { background-color: var(--bg); margin: 0; padding: 0; display: flex; justif
     margin-bottom: 10px;
 }
 
-.customer-box { background: var(--card); padding: 18px; border-radius: 12px; margin-bottom: 12px; border: 1px solid var(--border); scroll-margin-top: 140px; }
+.customer-box { background: var(--card); padding: 18px; border-radius: 12px; margin-bottom: 12px; border: 1px solid var(--border); scroll-margin-top: 150px; }
 .customer-name { font-weight: 700; font-size: 1.1rem; color: var(--text-dark); cursor: pointer; }
 .total-amount { font-weight: 800; font-size: 1.3rem; color: var(--success); margin: 5px 0; display: block; cursor: pointer; }
 
@@ -170,18 +171,9 @@ body { background-color: var(--bg); margin: 0; padding: 0; display: flex; justif
 </div>
 
 <script>
-// --- OFFLINE PERSISTENCE CODE ---
+// --- REGISTER SERVICE WORKER ---
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        const swScript = `
-            const cacheName = 'ah-sweets-cache-v1';
-            self.addEventListener('install', e => e.waitUntil(caches.open(cacheName).then(cache => cache.addAll(['./']))));
-            self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(res => res || fetch(e.request))));
-        `;
-        const blob = new Blob([swScript], {type: 'text/javascript'});
-        const swUrl = URL.createObjectURL(blob);
-        navigator.serviceWorker.register(swUrl);
-    });
+    navigator.serviceWorker.register('./sw.js');
 }
 
 // --- APP LOGIC ---
@@ -206,9 +198,7 @@ function updateStats() {
 function showUpdateDetails() {
     if(lastUpdateInfo.time && lastUpdateInfo.name !== "None") {
         alert(`Last update was for: ${lastUpdateInfo.name}\nAt: ${lastUpdateInfo.time}`);
-    } else {
-        alert("No transaction records found.");
-    }
+    } else { alert("No transaction records found."); }
 }
 
 function searchCustomer() {
@@ -223,9 +213,12 @@ function searchCustomer() {
             const row = document.createElement('div');
             row.textContent = c.name;
             row.onclick = () => {
-                document.getElementById(`cust-${c.id}`).scrollIntoView({ behavior: 'smooth' });
-                resultsDiv.style.display = 'none';
-                document.getElementById('customerSearch').value = '';
+                const element = document.getElementById(`cust-${c.id}`);
+                if(element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    resultsDiv.style.display = 'none';
+                    document.getElementById('customerSearch').value = '';
+                }
             };
             resultsDiv.appendChild(row);
         });
@@ -251,18 +244,16 @@ function downloadBackupFile() {
     const customerData = customers.map(c => `${c.name},${c.phone},${c.total}`).join('\n');
     const backupText = metadata + '\n' + customerData;
     const dataUri = 'data:text/plain;charset=utf-8,' + encodeURIComponent(backupText);
-    
     const now = new Date();
     const day = String(now.getDate()).padStart(2, '0');
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const year = now.getFullYear();
     let hours = now.getHours();
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const mins = String(now.getMinutes()).padStart(2, '0');
+    const secs = String(now.getSeconds()).padStart(2, '0');
     const ampm = hours >= 12 ? 'pm' : 'am';
     hours = hours % 12 || 12;
-
-    const fileName = `Candy-${day}-${month}-${year}-${hours}:${minutes}:${seconds}${ampm}.txt`;
+    const fileName = `Candy-${day}-${month}-${year}-${hours}:${mins}:${secs}${ampm}.txt`;
     const link = document.createElement('a');
     link.setAttribute('href', dataUri);
     link.setAttribute('download', fileName);
@@ -278,7 +269,6 @@ function restoreFromFile(event) {
     reader.onload = function(e) {
         try {
             const lines = e.target.result.trim().split('\n');
-            if (lines.length === 0) return;
             let startIndex = 0;
             if (lines[0].startsWith("META|")) {
                 const meta = lines[0].split('|');
@@ -290,7 +280,7 @@ function restoreFromFile(event) {
                 return { id: Date.now() + Math.random(), name: p[0].trim(), phone: p[1]?.trim() || "n", total: parseFloat(p[2]) || 0 };
             });
             save(); updateCustomerList();
-        } catch (err) { }
+        } catch (err) {}
     };
     reader.readAsText(file);
     event.target.value = '';
@@ -328,8 +318,7 @@ function addNewCustomer() {
     if (!nameInput.value.trim()) return;
     customers.push({ id: Date.now(), name: nameInput.value.trim(), phone: document.getElementById('newCustomerPhone').value.trim() || "n", total: 0 });
     save();
-    nameInput.value = '';
-    document.getElementById('newCustomerPhone').value = 'n'; 
+    nameInput.value = ''; document.getElementById('newCustomerPhone').value = 'n';
     updateCustomerList();
 }
 
@@ -342,13 +331,9 @@ function updateBill(id, action) {
     const now = new Date();
     lastUpdateInfo = { name: c.name, time: `${now.toLocaleDateString()} ${now.toLocaleTimeString()}` };
     save(); downloadBackupFile(); updateCustomerList();
-    
     if (/^\d+$/.test(c.phone) && c.phone !== "0") {
-        let msg = action === 'receive' 
-            ? `Dear ${c.name},\nRs. ${formatAmount(amt)} has been received from your account at AH Sweets.\nYour updated bill is Rs. ${formatAmount(c.total)}`
-            : `Dear ${c.name},\nRs. ${formatAmount(amt)} has been added to your account at AH Sweets.\nYour updated bill is Rs. ${formatAmount(c.total)}`;
-        let cleanPhone = c.phone.startsWith('0') ? c.phone.substring(1) : c.phone;
-        window.open(`sms:+92${cleanPhone}?body=${encodeURIComponent(msg)}`);
+        let msg = action === 'receive' ? `Dear ${c.name},\nRs. ${formatAmount(amt)} received.\nUpdated bill: Rs. ${formatAmount(c.total)}` : `Dear ${c.name},\nRs. ${formatAmount(amt)} added.\nUpdated bill: Rs. ${formatAmount(c.total)}`;
+        window.open(`sms:+92${c.phone.startsWith('0')?c.phone.substring(1):c.phone}?body=${encodeURIComponent(msg)}`);
     }
 }
 
@@ -359,10 +344,7 @@ function deleteTracker(id) {
     totalClickTracker[id].count = diff > 1500 ? 1 : totalClickTracker[id].count + 1;
     totalClickTracker[id].time = now;
     if (totalClickTracker[id].count >= 5) {
-        if (confirm("Delete this customer?")) {
-            customers = customers.filter(c => c.id !== id);
-            save(); downloadBackupFile(); updateCustomerList();
-        }
+        if (confirm("Delete?")) { customers = customers.filter(c => c.id !== id); save(); downloadBackupFile(); updateCustomerList(); }
         totalClickTracker[id].count = 0;
     }
 }
@@ -373,9 +355,7 @@ function editCustomer(id) {
     const phone = prompt("Edit phone", c.phone);
     if (name) { c.name = name; c.phone = phone || "n"; save(); updateCustomerList(); }
 }
-
-updateStats();
-updateCustomerList();
+updateStats(); updateCustomerList();
 </script>
 </body>
 </html>
