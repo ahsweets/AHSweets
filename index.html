@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AH Sweets Management</title>
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
@@ -33,14 +35,14 @@ body { background-color: var(--bg); margin: 0; padding: 0; display: flex; justif
     box-sizing: border-box;
 }
 
-/* Search Container Styles */
+.header-title { font-weight: 700; font-size: 1.2rem; color: var(--success); margin-bottom: 10px; text-align: left; }
+
 .search-container {
     position: sticky;
     top: 0;
     z-index: 1001;
     background: var(--bg);
-    padding: 10px 0;
-    margin-bottom: 10px;
+    padding: 5px 0 10px 0;
 }
 
 #customerSearch {
@@ -63,11 +65,7 @@ body { background-color: var(--bg); margin: 0; padding: 0; display: flex; justif
     border: 1px solid var(--border);
 }
 
-.search-results div {
-    padding: 12px;
-    border-bottom: 1px solid var(--border);
-    cursor: pointer;
-}
+.search-results div { padding: 12px; border-bottom: 1px solid var(--border); cursor: pointer; }
 
 .stats-grid { margin-bottom: 20px; cursor: pointer; }
 
@@ -114,7 +112,7 @@ body { background-color: var(--bg); margin: 0; padding: 0; display: flex; justif
     margin-bottom: 10px;
 }
 
-.customer-box { background: var(--card); padding: 18px; border-radius: 12px; margin-bottom: 12px; border: 1px solid var(--border); scroll-margin-top: 80px; }
+.customer-box { background: var(--card); padding: 18px; border-radius: 12px; margin-bottom: 12px; border: 1px solid var(--border); scroll-margin-top: 140px; }
 .customer-name { font-weight: 700; font-size: 1.1rem; color: var(--text-dark); cursor: pointer; }
 .total-amount { font-weight: 800; font-size: 1.3rem; color: var(--success); margin: 5px 0; display: block; cursor: pointer; }
 
@@ -137,6 +135,8 @@ body { background-color: var(--bg); margin: 0; padding: 0; display: flex; justif
 <body>
 
 <div id="management-app">
+    <div class="header-title">AH Sweets ~ Ali Haider</div>
+
     <div class="search-container">
         <input type="text" id="customerSearch" oninput="searchCustomer()" placeholder="🔍 0 Customers....">
         <div id="searchResults" class="search-results"></div>
@@ -170,6 +170,21 @@ body { background-color: var(--bg); margin: 0; padding: 0; display: flex; justif
 </div>
 
 <script>
+// --- OFFLINE PERSISTENCE CODE ---
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        const swScript = `
+            const cacheName = 'ah-sweets-cache-v1';
+            self.addEventListener('install', e => e.waitUntil(caches.open(cacheName).then(cache => cache.addAll(['./']))));
+            self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(res => res || fetch(e.request))));
+        `;
+        const blob = new Blob([swScript], {type: 'text/javascript'});
+        const swUrl = URL.createObjectURL(blob);
+        navigator.serviceWorker.register(swUrl);
+    });
+}
+
+// --- APP LOGIC ---
 let customers = JSON.parse(localStorage.getItem('customers')) || [];
 let lastUpdateInfo = JSON.parse(localStorage.getItem('lastUpdate')) || { name: "None", time: "" };
 const totalClickTracker = {};
@@ -200,14 +215,8 @@ function searchCustomer() {
     const query = document.getElementById('customerSearch').value.toLowerCase();
     const resultsDiv = document.getElementById('searchResults');
     resultsDiv.innerHTML = '';
-    
-    if (query.length < 1) {
-        resultsDiv.style.display = 'none';
-        return;
-    }
-
+    if (query.length < 1) { resultsDiv.style.display = 'none'; return; }
     const filtered = customers.filter(c => c.name.toLowerCase().includes(query));
-    
     if (filtered.length > 0) {
         resultsDiv.style.display = 'block';
         filtered.forEach(c => {
@@ -220,9 +229,7 @@ function searchCustomer() {
             };
             resultsDiv.appendChild(row);
         });
-    } else {
-        resultsDiv.style.display = 'none';
-    }
+    } else { resultsDiv.style.display = 'none'; }
 }
 
 function renderAlphaBar() {
@@ -256,7 +263,6 @@ function downloadBackupFile() {
     hours = hours % 12 || 12;
 
     const fileName = `Candy-${day}-${month}-${year}-${hours}:${minutes}:${seconds}${ampm}.txt`;
-
     const link = document.createElement('a');
     link.setAttribute('href', dataUri);
     link.setAttribute('download', fileName);
@@ -296,17 +302,14 @@ function updateCustomerList() {
     customers.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
     renderAlphaBar();
     let lastLetter = '';
-
     customers.forEach((c) => {
         let currentLetter = c.name.trim().charAt(0).toUpperCase();
         if (!/[A-Z]/.test(currentLetter)) currentLetter = '#';
-        
         if (currentLetter !== lastLetter) {
             const anchorId = currentLetter === '#' ? 'letter-HASH' : `letter-${currentLetter}`;
             div.innerHTML += `<div id="${anchorId}" class="letter-header">${currentLetter}</div>`;
             lastLetter = currentLetter;
         }
-        
         div.innerHTML += `
             <div class="customer-box" id="cust-${c.id}">
                 <div class="customer-name" ondblclick="editCustomer(${c.id})">${c.name}</div>
@@ -336,16 +339,9 @@ function updateBill(id, action) {
     if (!amt || amt <= 0) return;
     const c = customers.find(x => x.id === id);
     c.total += action === 'add' ? amt : -amt;
-    
     const now = new Date();
-    lastUpdateInfo = { 
-        name: c.name, 
-        time: `${now.toLocaleDateString()} ${now.toLocaleTimeString()}` 
-    };
-    
-    save(); 
-    downloadBackupFile(); 
-    updateCustomerList();
+    lastUpdateInfo = { name: c.name, time: `${now.toLocaleDateString()} ${now.toLocaleTimeString()}` };
+    save(); downloadBackupFile(); updateCustomerList();
     
     if (/^\d+$/.test(c.phone) && c.phone !== "0") {
         let msg = action === 'receive' 
