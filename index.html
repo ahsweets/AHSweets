@@ -20,7 +20,18 @@
     --receive-red: #ef4444;
 }
 
-body { background-color: var(--bg); margin: 0; padding: 0; display: flex; justify-content: center; }
+body { 
+    background-color: var(--bg); 
+    margin: 0; 
+    padding: 0; 
+    display: flex; 
+    justify-content: center;
+    /* Added to block text selection popups */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
 
 #management-app {
     font-family: 'Inter', sans-serif;
@@ -62,6 +73,9 @@ body { background-color: var(--bg); margin: 0; padding: 0; display: flex; justif
     color: white;
     font-size: 1rem;
     box-sizing: border-box;
+    /* Allow interaction for inputs */
+    -webkit-user-select: text;
+    user-select: text;
 }
 
 .search-results {
@@ -118,7 +132,20 @@ body { background-color: var(--bg); margin: 0; padding: 0; display: flex; justif
 .customer-name { font-weight: 700; font-size: 1.1rem; color: var(--text-dark); cursor: pointer; }
 .total-amount { font-weight: 800; font-size: 1.3rem; color: var(--success); margin: 5px 0; display: block; cursor: pointer; }
 
-.input-box { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; margin: 10px 0; font-size: 1rem; box-sizing: border-box; background: #2c2c2c; color: var(--text-dark); }
+.input-box { 
+    width: 100%; 
+    padding: 10px; 
+    border: 1px solid var(--border); 
+    border-radius: 8px; 
+    margin: 10px 0; 
+    font-size: 1rem; 
+    box-sizing: border-box; 
+    background: #2c2c2c; 
+    color: var(--text-dark);
+    /* Allow interaction for inputs */
+    -webkit-user-select: text;
+    user-select: text;
+}
 
 .button-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
@@ -134,7 +161,7 @@ body { background-color: var(--bg); margin: 0; padding: 0; display: flex; justif
 .bottom-spacer { height: 280px; }
 </style>
 </head>
-<body>
+<body oncontextmenu="return false;">
 
 <div id="management-app">
     <div class="header-row">
@@ -142,7 +169,7 @@ body { background-color: var(--bg); margin: 0; padding: 0; display: flex; justif
         </div>
 
     <div class="search-container">
-        <input type="text" id="customerSearch" oninput="searchCustomer()" placeholder="🔍 Search Customers...">
+        <input type="text" id="customerSearch" oninput="searchCustomer()" placeholder="🔍 Search Customers..." autocomplete="off" spellcheck="false" autocapitalize="off">
         <div id="searchResults" class="search-results"></div>
     </div>
 
@@ -158,8 +185,8 @@ body { background-color: var(--bg); margin: 0; padding: 0; display: flex; justif
 
     <div id="add-new-section" class="add-new-section">
         <h3 style="margin-top:0; font-size:1rem; color:var(--text-dark)">+ Add New Customer</h3>
-        <input id="newCustomerName" type="text" placeholder="Customer Name" class="input-box" />
-        <input id="newCustomerPhone" type="text" value="n" class="input-box" />
+        <input id="newCustomerName" type="text" placeholder="Customer Name" class="input-box" autocomplete="off" />
+        <input id="newCustomerPhone" type="text" value="n" class="input-box" autocomplete="off" />
         <button class="btn btn-add" style="width:100%" onclick="addNewCustomer()">Create Account</button>
     </div>
 
