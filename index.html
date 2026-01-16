@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AH Sweets Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root {
+    --primary: #059669;
+    --success: #FFC107;
+    --bg: #1e1e1e;
+    --card: #2c2c2c;
+    --text-dark: #e5e7eb;
+    --text-light: #9ca3af;
+    --border: #374151;
+    --receive-red: #ef4444;
+    --outstanding-amount: #35FF23;
+}
+
+body { background-color: var(--bg); margin: 0; padding: 0; display: flex; justify-content: center; }
+
+#management-app {
+    font-family: 'Inter', sans-serif;
+    color: var(--text-dark);
+    max-width: 600px;
+    width: 100%;
+    margin: 10px 10px;
+    padding: 15px;
+    padding-right: 40px; 
+    border-radius: 16px;
+    box-sizing: border-box;
+}
+
+/* Search Container Styles */
+.search-container {
+    position: sticky;
+    top: 0;
+    z-index: 1001;
+    background: var(--bg);
+    padding: 10px 0;
+    margin-bottom: 10px;
+}
+
+#customerSearch {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    background: #2c2c2c;
+    color: white;
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+
+.search-results {
+    background: #333;
+    border-radius: 0 0 10px 10px;
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+    border: 1px solid var(--border);
+}
+
+.search-results div {
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+}
+
+.stats-grid { margin-bottom: 20px; cursor: pointer; }
+
+.stat-card {
+    background: var(--card);
+    padding: 12px 20px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stat-card span { font-size: 0.9rem; color: var(--text-light); text-transform: uppercase; font-weight: 600; margin-right: 6px; }
+.stat-card b { font-size: 1.2rem; color: var(--outstanding-amount); }
+
+.alpha-nav {
+    position: fixed;
+    right: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+    background: rgba(30, 30, 30, 0.85);
+    padding: 5px 0;
+    border-radius: 10px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.alpha-nav a { font-size: 11px; color: var(--success); padding: 1px 6px; text-decoration: none; text-align: center; font-weight: 700; display: block; line-height: 1.4; }
+
+.letter-header {
+    color: var(--success);
+    font-size: 1.2rem;
+    font-weight: 800;
+    padding: 10px 0 5px 0;
+    border-bottom: 1px solid var(--border);
+    margin-top: 15px;
+    margin-bottom: 10px;
+}
+
+.customer-box { background: var(--card); padding: 18px; border-radius: 12px; margin-bottom: 12px; border: 1px solid var(--border); scroll-margin-top: 80px; }
+.customer-name { font-weight: 700; font-size: 1.1rem; color: var(--text-dark); cursor: pointer; }
+.total-amount { font-weight: 800; font-size: 1.3rem; color: var(--success); margin: 5px 0; display: block; cursor: pointer; }
+
+.input-box { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; margin: 10px 0; font-size: 1rem; box-sizing: border-box; background: #2c2c2c; color: var(--text-dark); }
+
+.button-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.btn { padding: 10px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9rem; }
+.btn-add { background: var(--primary); color: white; }
+.btn-receive { background: var(--receive-red); color: white; }
+.btn-backup { background: #374151; color: white; }
+
+.backup-restore-container { display: flex; gap: 10px; margin-bottom: 20px; }
+.backup-restore-container .btn-backup { flex: 1; }
+
+.add-new-section { margin-top: 30px; padding: 20px; background: #2c2c2c; border-radius: 12px; border: 2px dashed #4b5563; }
+.bottom-spacer { height: 280px; }
+</style>
+</head>
+<body>
+
+<div id="management-app">
+    <div class="search-container">
+        <input type="text" id="customerSearch" oninput="searchCustomer()" placeholder="🔍 0 Customers....">
+        <div id="searchResults" class="search-results"></div>
+    </div>
+
+    <div id="alpha-nav" class="alpha-nav"></div>
+
+    <div class="backup-restore-container">
+        <button class="btn btn-backup" onclick="downloadBackupFile()">⌛ Backup Customers</button>
+        <button class="btn btn-backup" onclick="document.getElementById('fileInput').click()">⏳ Restore Customers</button>
+        <input type="file" id="fileInput" style="display:none" accept=".txt" onchange="restoreFromFile(event)">
+    </div>
+
+    <div class="stats-grid" ondblclick="showUpdateDetails()">
+        <div class="stat-card">
+            <span>Credit :-</span>
+            <b id="stat-total-money">0</b>
+        </div>
+    </div>
+
+    <div id="customer-list"></div>
+
+    <div id="add-new-section" class="add-new-section">
+        <h3 style="margin-top:0; font-size:1rem; color:var(--text-dark)">+ Add New Customer</h3>
+        <input id="newCustomerName" type="text" placeholder="Customer Name" class="input-box" />
+        <input id="newCustomerPhone" type="text" value="n" class="input-box" />
+        <button class="btn btn-add" style="width:100%" onclick="addNewCustomer()">Create Account</button>
+    </div>
+
+    <div class="bottom-spacer"></div>
+</div>
+
+<script>
+let customers = JSON.parse(localStorage.getItem('customers')) || [];
+let lastUpdateInfo = JSON.parse(localStorage.getItem('lastUpdate')) || { name: "None", time: "" };
+const totalClickTracker = {};
+
+function formatAmount(n) { return Number(n).toLocaleString('en-IN'); }
+
+function save() {
+    localStorage.setItem('customers', JSON.stringify(customers));
+    localStorage.setItem('lastUpdate', JSON.stringify(lastUpdateInfo));
+    updateStats();
+}
+
+function updateStats() {
+    const total = customers.reduce((sum, c) => sum + c.total, 0);
+    document.getElementById('stat-total-money').textContent = formatAmount(Math.round(total));
+    document.getElementById('customerSearch').placeholder = `🔍 ${customers.length} Customers....`;
+}
+
+function showUpdateDetails() {
+    if(lastUpdateInfo.time && lastUpdateInfo.name !== "None") {
+        alert(`Last update was for: ${lastUpdateInfo.name}\nAt: ${lastUpdateInfo.time}`);
+    } else {
+        alert("No transaction records found.");
+    }
+}
+
+function searchCustomer() {
+    const query = document.getElementById('customerSearch').value.toLowerCase();
+    const resultsDiv = document.getElementById('searchResults');
+    resultsDiv.innerHTML = '';
+    
+    if (query.length < 1) {
+        resultsDiv.style.display = 'none';
+        return;
+    }
+
+    const filtered = customers.filter(c => c.name.toLowerCase().includes(query));
+    
+    if (filtered.length > 0) {
+        resultsDiv.style.display = 'block';
+        filtered.forEach(c => {
+            const row = document.createElement('div');
+            row.textContent = c.name;
+            row.onclick = () => {
+                document.getElementById(`cust-${c.id}`).scrollIntoView({ behavior: 'smooth' });
+                resultsDiv.style.display = 'none';
+                document.getElementById('customerSearch').value = '';
+            };
+            resultsDiv.appendChild(row);
+        });
+    } else {
+        resultsDiv.style.display = 'none';
+    }
+}
+
+function renderAlphaBar() {
+    const nav = document.getElementById('alpha-nav');
+    const activeLetters = [...new Set(customers.map(c => {
+        let char = c.name.trim().charAt(0).toUpperCase();
+        return /[A-Z]/.test(char) ? char : '#';
+    }))].sort();
+    nav.innerHTML = `<a href="#add-new-section" style="font-size: 18px; margin-bottom: 5px;">+</a>`;
+    activeLetters.forEach(char => {
+        const targetId = char === '#' ? 'letter-HASH' : `letter-${char}`;
+        nav.innerHTML += `<a href="#${targetId}">${char}</a>`;
+    });
+}
+
+function downloadBackupFile() {
+    if (customers.length === 0) return;
+    const metadata = `META|${lastUpdateInfo.name}|${lastUpdateInfo.time}`;
+    const customerData = customers.map(c => `${c.name},${c.phone},${c.total}`).join('\n');
+    const backupText = metadata + '\n' + customerData;
+    const dataUri = 'data:text/plain;charset=utf-8,' + encodeURIComponent(backupText);
+    
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    let hours = now.getHours();
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'pm' : 'am';
+    hours = hours % 12 || 12;
+
+    const fileName = `Candy-${day}-${month}-${year}-${hours}:${minutes}:${seconds}${ampm}.txt`;
+
+    const link = document.createElement('a');
+    link.setAttribute('href', dataUri);
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function restoreFromFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const lines = e.target.result.trim().split('\n');
+            if (lines.length === 0) return;
+            let startIndex = 0;
+            if (lines[0].startsWith("META|")) {
+                const meta = lines[0].split('|');
+                lastUpdateInfo = { name: meta[1], time: meta[2] };
+                startIndex = 1;
+            }
+            customers = lines.slice(startIndex).map(line => {
+                const p = line.split(',');
+                return { id: Date.now() + Math.random(), name: p[0].trim(), phone: p[1]?.trim() || "n", total: parseFloat(p[2]) || 0 };
+            });
+            save(); updateCustomerList();
+        } catch (err) { }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+}
+
+function updateCustomerList() {
+    const div = document.getElementById('customer-list');
+    div.innerHTML = '';
+    customers.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+    renderAlphaBar();
+    let lastLetter = '';
+
+    customers.forEach((c) => {
+        let currentLetter = c.name.trim().charAt(0).toUpperCase();
+        if (!/[A-Z]/.test(currentLetter)) currentLetter = '#';
+        
+        if (currentLetter !== lastLetter) {
+            const anchorId = currentLetter === '#' ? 'letter-HASH' : `letter-${currentLetter}`;
+            div.innerHTML += `<div id="${anchorId}" class="letter-header">${currentLetter}</div>`;
+            lastLetter = currentLetter;
+        }
+        
+        div.innerHTML += `
+            <div class="customer-box" id="cust-${c.id}">
+                <div class="customer-name" ondblclick="editCustomer(${c.id})">${c.name}</div>
+                <div class="total-amount" onclick="deleteTracker(${c.id})">Rs. ${formatAmount(Math.round(c.total))}</div>
+                <input type="number" id="input-${c.id}" class="input-box" placeholder="Enter amount">
+                <div class="button-group">
+                    <button class="btn btn-add" onclick="updateBill(${c.id}, 'add')">Add Bill</button>
+                    <button class="btn btn-receive" onclick="updateBill(${c.id}, 'receive')">Receive</button>
+                </div>
+            </div>`;
+    });
+}
+
+function addNewCustomer() {
+    const nameInput = document.getElementById('newCustomerName');
+    if (!nameInput.value.trim()) return;
+    customers.push({ id: Date.now(), name: nameInput.value.trim(), phone: document.getElementById('newCustomerPhone').value.trim() || "n", total: 0 });
+    save();
+    nameInput.value = '';
+    document.getElementById('newCustomerPhone').value = 'n'; 
+    updateCustomerList();
+}
+
+function updateBill(id, action) {
+    const input = document.getElementById(`input-${id}`);
+    const amt = parseFloat(input.value);
+    if (!amt || amt <= 0) return;
+    const c = customers.find(x => x.id === id);
+    c.total += action === 'add' ? amt : -amt;
+    
+    const now = new Date();
+    lastUpdateInfo = { 
+        name: c.name, 
+        time: `${now.toLocaleDateString()} ${now.toLocaleTimeString()}` 
+    };
+    
+    save(); 
+    downloadBackupFile(); 
+    updateCustomerList();
+    
+    if (/^\d+$/.test(c.phone) && c.phone !== "0") {
+        let msg = action === 'receive' 
+            ? `Dear ${c.name},\nRs. ${formatAmount(amt)} has been received from your account at AH Sweets.\nYour updated bill is Rs. ${formatAmount(c.total)}`
+            : `Dear ${c.name},\nRs. ${formatAmount(amt)} has been added to your account at AH Sweets.\nYour updated bill is Rs. ${formatAmount(c.total)}`;
+        let cleanPhone = c.phone.startsWith('0') ? c.phone.substring(1) : c.phone;
+        window.open(`sms:+92${cleanPhone}?body=${encodeURIComponent(msg)}`);
+    }
+}
+
+function deleteTracker(id) {
+    const now = Date.now();
+    if (!totalClickTracker[id]) { totalClickTracker[id] = { count: 1, time: now }; return; }
+    const diff = now - totalClickTracker[id].time;
+    totalClickTracker[id].count = diff > 1500 ? 1 : totalClickTracker[id].count + 1;
+    totalClickTracker[id].time = now;
+    if (totalClickTracker[id].count >= 5) {
+        if (confirm("Delete this customer?")) {
+            customers = customers.filter(c => c.id !== id);
+            save(); downloadBackupFile(); updateCustomerList();
+        }
+        totalClickTracker[id].count = 0;
+    }
+}
+
+function editCustomer(id) {
+    const c = customers.find(x => x.id === id);
+    const name = prompt("Edit name", c.name);
+    const phone = prompt("Edit phone", c.phone);
+    if (name) { c.name = name; c.phone = phone || "n"; save(); updateCustomerList(); }
+}
+
+updateStats();
+updateCustomerList();
+</script>
+</body>
+</html>
