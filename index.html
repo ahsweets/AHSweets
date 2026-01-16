@@ -106,11 +106,10 @@ body { background-color: var(--bg); margin: 0; padding: 0; display: flex; justif
     align-items: center;
 }
 
-.total-credit-left {
+.total-credit-grey {
     color: #888; /* Grey plain text */
     font-size: 1rem;
     font-weight: 500;
-    margin-right: 0px; /* No space */
 }
 
 .customer-box { background: var(--card); padding: 18px; border-radius: 12px; margin-bottom: 12px; border: 1px solid var(--border); scroll-margin-top: 150px; }
@@ -167,14 +166,12 @@ body { background-color: var(--bg); margin: 0; padding: 0; display: flex; justif
 </div>
 
 <script>
-// --- SERVICE WORKER & POPUP BLOCKER ---
 if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js'); }
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); });
 
-// --- APP LOGIC ---
 let customers = JSON.parse(localStorage.getItem('customers')) || [];
 let lastUpdateInfo = JSON.parse(localStorage.getItem('lastUpdate')) || { name: "None", time: "" };
-let isHidden = true; // Hidden by default
+let isHidden = true; 
 let singleViewId = null; 
 const totalClickTracker = {};
 
@@ -254,10 +251,10 @@ function updateUI() {
             const anchorId = currentLetter === '#' ? 'letter-HASH' : `letter-${currentLetter}`;
             const totalDisplay = isHidden ? "~****" : `~${formatAmount(Math.round(total))}`;
             
-            // Placement: Total credit summary text placed directly on the LEFT of the first alphabet header
-            const summaryText = lastLetter === '' ? `<span class="total-credit-left">${totalDisplay}</span>` : '';
+            // Layout: Alphabet Left, Grey Total Right (No Space)
+            const summaryText = lastLetter === '' ? `<span class="total-credit-grey">${totalDisplay}</span>` : '';
             
-            div.innerHTML += `<div id="${anchorId}" class="letter-header">${summaryText}${currentLetter}</div>`;
+            div.innerHTML += `<div id="${anchorId}" class="letter-header">${currentLetter}${summaryText}</div>`;
             lastLetter = currentLetter;
         }
 
