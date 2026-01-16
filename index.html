@@ -101,8 +101,9 @@ body { background-color: var(--bg); margin: 0; padding: 0; display: flex; justif
     border-bottom: 1px solid var(--border);
     margin-top: 15px;
     margin-bottom: 10px;
+    /* Keeps items on one line */
     display: flex;
-    justify-content: flex-start;
+    flex-direction: row;
     align-items: center;
 }
 
@@ -110,6 +111,7 @@ body { background-color: var(--bg); margin: 0; padding: 0; display: flex; justif
     color: #888; /* Grey plain text */
     font-size: 1rem;
     font-weight: 500;
+    margin-left: 4px; /* Tiny space for "~" to look clean */
 }
 
 .customer-box { background: var(--card); padding: 18px; border-radius: 12px; margin-bottom: 12px; border: 1px solid var(--border); scroll-margin-top: 150px; }
@@ -251,10 +253,10 @@ function updateUI() {
             const anchorId = currentLetter === '#' ? 'letter-HASH' : `letter-${currentLetter}`;
             const totalDisplay = isHidden ? "~****" : `~${formatAmount(Math.round(total))}`;
             
-            // Layout: Alphabet Left, Grey Total Right (No Space)
+            // Layout: Alphabet Header, then Grey Text on same line
             const summaryText = lastLetter === '' ? `<span class="total-credit-grey">${totalDisplay}</span>` : '';
             
-            div.innerHTML += `<div id="${anchorId}" class="letter-header">${currentLetter}${summaryText}</div>`;
+            div.innerHTML += `<div id="${anchorId}" class="letter-header"><span>${currentLetter}</span>${summaryText}</div>`;
             lastLetter = currentLetter;
         }
 
