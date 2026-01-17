@@ -128,19 +128,6 @@ body {
 .customer-name { font-weight: 700; font-size: 1.1rem; color: var(--text-dark); cursor: pointer; }
 .total-amount { font-weight: 800; font-size: 1.3rem; color: var(--success); margin: 5px 0; display: block; cursor: pointer; }
 
-.cust-id-btn {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    font-size: 10px;
-    background: #4b5563;
-    color: white;
-    padding: 2px 6px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: 600;
-}
-
 .input-box { 
     width: 100%; 
     padding: 10px; 
@@ -242,34 +229,6 @@ function searchCustomer() {
     } else { resultsDiv.style.display = 'none'; }
 }
 
-function showHistory(id) {
-    const c = customers.find(x => x.id === id);
-    if (!c.history || c.history.length === 0) {
-        alert("No history available for " + c.name);
-        return;
-    }
-    let historyHtml = c.history.map((h, index) => {
-        const bgColor = index % 2 === 0 ? '#374151' : '#2c2c2c';
-        return `<div style="background:${bgColor}; padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid #444;">
-            <div style="font-weight:700; color:#FFC107; font-size:0.9rem;">${h.type} :- ${formatAmount(h.val)}</div>
-            <div style="color:#e5e7eb; font-size:0.85rem; margin:2px 0;">Total Bill :- ${formatAmount(h.total)}</div>
-            <div style="color:#9ca3af; font-size:0.75rem;">${h.date}</div>
-        </div>`;
-    }).join('');
-
-    const overlay = document.createElement('div');
-    overlay.style = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:2000; display:flex; align-items:center; justify-content:center; padding:20px; box-sizing:border-box;";
-    overlay.onclick = () => document.body.removeChild(overlay);
-
-    const modal = document.createElement('div');
-    modal.style = "background:#1e1e1e; padding:15px; border-radius:15px; width:100%; max-width:400px; border:2px solid #FFC107; max-height:80vh; overflow-y:auto;";
-    modal.onclick = (e) => e.stopPropagation();
-    modal.innerHTML = `<h3 style="color:#FFC107; margin:0 0 15px 0; text-align:center;">History: ${c.name}</h3>` + historyHtml + `<button class="btn btn-backup" style="width:100%; margin-top:10px;">Close</button>`;
-    
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-}
-
 function updateUI() {
     const total = customers.reduce((sum, c) => sum + c.total, 0);
     const div = document.getElementById('customer-list');
@@ -295,7 +254,6 @@ function updateUI() {
     }
 
     let lastLetter = '';
-    let usedIds = new Set();
     let currentHTML = '';
 
     customers.forEach((c) => {
@@ -312,13 +270,8 @@ function updateUI() {
             lastLetter = currentLetter;
         }
 
-        let randId;
-        do { randId = Math.floor(1000 + Math.random() * 9000); } while (usedIds.has(randId));
-        usedIds.add(randId);
-
         currentHTML += `
             <div class="customer-box" id="cust-${c.id}">
-                <div class="cust-id-btn" onclick="showHistory(${c.id})">ID: #${randId}</div>
                 <div class="customer-name" ondblclick="editCustomer(${c.id})">${c.name}</div>
                 <div class="total-amount" onclick="deleteTracker(${c.id})">Rs. ${formatAmount(Math.round(c.total))}</div>
                 <input type="number" id="input-${c.id}" class="input-box" placeholder="Enter amount">
@@ -348,7 +301,7 @@ function showLastUpdate() {
 function addNewCustomer() {
     const nameInput = document.getElementById('newCustomerName');
     if (!nameInput.value.trim()) return;
-    customers.push({ id: Date.now(), name: nameInput.value.trim(), phone: document.getElementById('newCustomerPhone').value.trim() || "n", total: 0, history: [] });
+    customers.push({ id: Date.now(), name: nameInput.value.trim(), phone: document.getElementById('newCustomerPhone').value.trim() || "n", total: 0 });
     save();
     nameInput.value = ''; document.getElementById('newCustomerPhone').value = 'n';
 }
@@ -363,15 +316,6 @@ function updateBill(id, action) {
     const now = new Date();
     const dateStr = now.toLocaleDateString() + " " + now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: true});
     
-    if(!c.history) c.history = [];
-    c.history.unshift({
-        type: action === 'add' ? "Add money" : "Receive money",
-        val: amt,
-        total: c.total,
-        date: dateStr
-    });
-    if(c.history.length > 5) c.history.pop();
-
     lastUpdateInfo = { name: c.name, time: dateStr };
     save(); 
     downloadBackupFile();
@@ -392,7 +336,6 @@ function downloadBackupFile() {
             C: c.name,
             P: c.phone,
             T: c.total,
-            H: c.history || [],
             I: c.id
         }))
     };
@@ -425,8 +368,7 @@ function restoreFromFile(event) {
                 id: item.I || Date.now() + Math.random(),
                 name: item.C,
                 phone: item.P,
-                total: item.T,
-                history: item.H || []
+                total: item.T
             }));
             save();
         } catch (err) { alert("Invalid backup format."); }
