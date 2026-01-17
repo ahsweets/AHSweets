@@ -378,8 +378,8 @@ function updateBill(id, action) {
     
     if (/^\d+$/.test(c.phone) && c.phone !== "0") {
         let msg = action === 'receive' ? 
-            `Dear ${c.name},\nRs. ${formatAmount(amt)} has been received from your account at AH Sweets.\nYour updated bill is Rs. ${formatAmount(c.total)}` : 
-            `Dear ${c.name},\nRs. ${formatAmount(amt)} has been added to your account at AH Sweets.\nYour updated bill is Rs. ${formatAmount(c.total)}`;
+            `Dear Customer,\nRs. ${formatAmount(amt)} has been received from your account at AH Sweets.\nYour updated bill is Rs. ${formatAmount(c.total)}` : 
+            `Dear Customer,\nRs. ${formatAmount(amt)} has been added to your account at AH Sweets.\nYour updated bill is Rs. ${formatAmount(c.total)}`;
         window.open(`sms:+92${c.phone.startsWith('0')?c.phone.substring(1):c.phone}?body=${encodeURIComponent(msg)}`);
     }
 }
