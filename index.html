@@ -26,7 +26,6 @@ body {
     padding: 0; 
     display: flex; 
     justify-content: center;
-    /* Added to block text selection popups */
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
@@ -54,8 +53,6 @@ body {
 
 .header-title { font-weight: 700; font-size: 1.1rem; color: var(--success); }
 
-/* Privacy toggle style removed as button is gone */
-
 .search-container {
     position: sticky;
     top: 0;
@@ -73,7 +70,6 @@ body {
     color: white;
     font-size: 1rem;
     box-sizing: border-box;
-    /* Allow interaction for inputs */
     -webkit-user-select: text;
     user-select: text;
 }
@@ -128,9 +124,22 @@ body {
     cursor: pointer;
 }
 
-.customer-box { background: var(--card); padding: 18px; border-radius: 12px; margin-bottom: 12px; border: 1px solid var(--border); scroll-margin-top: 150px; }
+.customer-box { background: var(--card); padding: 18px; border-radius: 12px; margin-bottom: 12px; border: 1px solid var(--border); scroll-margin-top: 150px; position: relative; }
 .customer-name { font-weight: 700; font-size: 1.1rem; color: var(--text-dark); cursor: pointer; }
 .total-amount { font-weight: 800; font-size: 1.3rem; color: var(--success); margin: 5px 0; display: block; cursor: pointer; }
+
+.cust-id-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 10px;
+    background: #4b5563;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+}
 
 .input-box { 
     width: 100%; 
@@ -142,7 +151,6 @@ body {
     box-sizing: border-box; 
     background: #2c2c2c; 
     color: var(--text-dark);
-    /* Allow interaction for inputs */
     -webkit-user-select: text;
     user-select: text;
 }
@@ -154,9 +162,6 @@ body {
 .btn-receive { background: var(--receive-red); color: white; }
 .btn-backup { background: #374151; color: white; }
 
-.backup-restore-container { display: flex; gap: 10px; margin-bottom: 20px; }
-.backup-restore-container .btn-backup { flex: 1; }
-
 .add-new-section { margin-top: 30px; padding: 20px; background: #2c2c2c; border-radius: 12px; border: 2px dashed #4b5563; }
 .bottom-spacer { height: 280px; }
 </style>
@@ -166,7 +171,7 @@ body {
 <div id="management-app">
     <div class="header-row">
         <div class="header-title">AH Sweets ~ Ali Haider</div>
-        </div>
+    </div>
 
     <div class="search-container">
         <input type="text" id="customerSearch" oninput="searchCustomer()" placeholder="🔍 Search Customers..." autocomplete="off" spellcheck="false" autocapitalize="off">
@@ -175,10 +180,10 @@ body {
 
     <div id="alpha-nav" class="alpha-nav"></div>
 
-    <div class="backup-restore-container">
-        <button class="btn btn-backup" onclick="downloadBackupFile()">⌛ Backup</button>
-        <button class="btn btn-backup" onclick="document.getElementById('fileInput').click()">⏳ Restore</button>
-        <input type="file" id="fileInput" style="display:none" accept=".txt" onchange="restoreFromFile(event)">
+    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+        <button class="btn btn-backup" style="flex:1" onclick="downloadBackupFile()">⌛ Backup</button>
+        <button class="btn btn-backup" style="flex:1" onclick="document.getElementById('fileInput').click()">⏳ Restore</button>
+        <input type="file" id="fileInput" style="display:none" onchange="restoreFromFile(event)">
     </div>
 
     <div id="customer-list"></div>
@@ -199,7 +204,6 @@ window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); });
 
 let customers = JSON.parse(localStorage.getItem('customers')) || [];
 let lastUpdateInfo = JSON.parse(localStorage.getItem('lastUpdate')) || { name: "None", time: "" };
-let isHidden = false; // Set to unhide by default
 let singleViewId = null; 
 const totalClickTracker = {};
 
@@ -210,8 +214,6 @@ function save() {
     localStorage.setItem('lastUpdate', JSON.stringify(lastUpdateInfo));
     updateUI();
 }
-
-// togglePrivacy function removed
 
 function searchCustomer() {
     const query = document.getElementById('customerSearch').value.toLowerCase().trim();
@@ -231,7 +233,6 @@ function searchCustomer() {
             row.textContent = c.name;
             row.onclick = () => {
                 singleViewId = c.id; 
-                isHidden = false; 
                 resultsDiv.style.display = 'none';
                 document.getElementById('customerSearch').value = '';
                 updateUI();
@@ -239,6 +240,34 @@ function searchCustomer() {
             resultsDiv.appendChild(row);
         });
     } else { resultsDiv.style.display = 'none'; }
+}
+
+function showHistory(id) {
+    const c = customers.find(x => x.id === id);
+    if (!c.history || c.history.length === 0) {
+        alert("No history available for " + c.name);
+        return;
+    }
+    let historyHtml = c.history.map((h, index) => {
+        const bgColor = index % 2 === 0 ? '#374151' : '#2c2c2c';
+        return `<div style="background:${bgColor}; padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid #444;">
+            <div style="font-weight:700; color:#FFC107; font-size:0.9rem;">${h.type} :- ${formatAmount(h.val)}</div>
+            <div style="color:#e5e7eb; font-size:0.85rem; margin:2px 0;">Total Bill :- ${formatAmount(h.total)}</div>
+            <div style="color:#9ca3af; font-size:0.75rem;">${h.date}</div>
+        </div>`;
+    }).join('');
+
+    const overlay = document.createElement('div');
+    overlay.style = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:2000; display:flex; align-items:center; justify-content:center; padding:20px; box-sizing:border-box;";
+    overlay.onclick = () => document.body.removeChild(overlay);
+
+    const modal = document.createElement('div');
+    modal.style = "background:#1e1e1e; padding:15px; border-radius:15px; width:100%; max-width:400px; border:2px solid #FFC107; max-height:80vh; overflow-y:auto;";
+    modal.onclick = (e) => e.stopPropagation();
+    modal.innerHTML = `<h3 style="color:#FFC107; margin:0 0 15px 0; text-align:center;">History: ${c.name}</h3>` + historyHtml + `<button class="btn btn-backup" style="width:100%; margin-top:10px;">Close</button>`;
+    
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
 }
 
 function updateUI() {
@@ -266,6 +295,9 @@ function updateUI() {
     }
 
     let lastLetter = '';
+    let usedIds = new Set();
+    let currentHTML = '';
+
     customers.forEach((c) => {
         if (singleViewId !== null && c.id !== singleViewId) return;
 
@@ -276,12 +308,17 @@ function updateUI() {
             const anchorId = currentLetter === '#' ? 'letter-HASH' : `letter-${currentLetter}`;
             const totalDisplay = `~ ${formatAmount(Math.round(total))}`;
             const summaryText = lastLetter === '' ? `<span class="total-credit-grey" ondblclick="showLastUpdate()">${totalDisplay}</span>` : '';
-            div.innerHTML += `<div id="${anchorId}" class="letter-header"><span>${currentLetter}</span>${summaryText}</div>`;
+            currentHTML += `<div id="${anchorId}" class="letter-header"><span>${currentLetter}</span>${summaryText}</div>`;
             lastLetter = currentLetter;
         }
 
-        div.innerHTML += `
+        let randId;
+        do { randId = Math.floor(1000 + Math.random() * 9000); } while (usedIds.has(randId));
+        usedIds.add(randId);
+
+        currentHTML += `
             <div class="customer-box" id="cust-${c.id}">
+                <div class="cust-id-btn" onclick="showHistory(${c.id})">ID: #${randId}</div>
                 <div class="customer-name" ondblclick="editCustomer(${c.id})">${c.name}</div>
                 <div class="total-amount" onclick="deleteTracker(${c.id})">Rs. ${formatAmount(Math.round(c.total))}</div>
                 <input type="number" id="input-${c.id}" class="input-box" placeholder="Enter amount">
@@ -291,6 +328,8 @@ function updateUI() {
                 </div>
             </div>`;
     });
+
+    div.innerHTML = currentHTML;
 
     if (singleViewId !== null) {
         div.innerHTML += `<button class="btn btn-backup" style="width:100%; margin-top:10px" onclick="clearSearch()">Show All Customers</button>`;
@@ -309,7 +348,7 @@ function showLastUpdate() {
 function addNewCustomer() {
     const nameInput = document.getElementById('newCustomerName');
     if (!nameInput.value.trim()) return;
-    customers.push({ id: Date.now(), name: nameInput.value.trim(), phone: document.getElementById('newCustomerPhone').value.trim() || "n", total: 0 });
+    customers.push({ id: Date.now(), name: nameInput.value.trim(), phone: document.getElementById('newCustomerPhone').value.trim() || "n", total: 0, history: [] });
     save();
     nameInput.value = ''; document.getElementById('newCustomerPhone').value = 'n';
 }
@@ -320,9 +359,23 @@ function updateBill(id, action) {
     if (!amt || amt <= 0) return;
     const c = customers.find(x => x.id === id);
     c.total += action === 'add' ? amt : -amt;
+    
     const now = new Date();
-    lastUpdateInfo = { name: c.name, time: `${now.toLocaleDateString()} ${now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` };
-    save(); downloadBackupFile();
+    const dateStr = now.toLocaleDateString() + " " + now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: true});
+    
+    if(!c.history) c.history = [];
+    c.history.unshift({
+        type: action === 'add' ? "Add money" : "Receive money",
+        val: amt,
+        total: c.total,
+        date: dateStr
+    });
+    if(c.history.length > 5) c.history.pop();
+
+    lastUpdateInfo = { name: c.name, time: dateStr };
+    save(); 
+    downloadBackupFile();
+    
     if (/^\d+$/.test(c.phone) && c.phone !== "0") {
         let msg = action === 'receive' ? 
             `Dear ${c.name},\nRs. ${formatAmount(amt)} has been received from your account at AH Sweets.\nYour updated bill is Rs. ${formatAmount(c.total)}` : 
@@ -333,19 +386,28 @@ function updateBill(id, action) {
 
 function downloadBackupFile() {
     if (customers.length === 0) return;
-    const backupText = `META|${lastUpdateInfo.name}|${lastUpdateInfo.time}\n` + customers.map(c => `${c.name},${c.phone},${c.total}`).join('\n');
-    const dataUri = 'data:text/plain;charset=utf-8,' + encodeURIComponent(backupText);
+    const backupObj = {
+        M: { N: lastUpdateInfo.name, T: lastUpdateInfo.time },
+        D: customers.map(c => ({
+            C: c.name,
+            P: c.phone,
+            T: c.total,
+            H: c.history || [],
+            I: c.id
+        }))
+    };
     const now = new Date();
-    const dd = String(now.getDate()).padStart(2, '0');
     const monthNames = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
-    const mon = monthNames[now.getMonth()];
-    let hh = now.getHours();
-    const ampm = hh >= 12 ? 'p' : 'a';
-    hh = hh % 12; hh = hh ? hh : 12; 
-    const hStr = String(hh).padStart(2, '0');
-    const min = String(now.getMinutes()).padStart(2, '0');
-    const ss = String(now.getSeconds()).padStart(2, '0');
-    const fileName = `Candy.${dd}.${mon}.${hStr}.${min}.${ss}.${ampm}.txt`;
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = monthNames[now.getMonth()];
+    const hours = String(now.getHours()).padStart(2, '0');
+    const mins = String(now.getMinutes()).padStart(2, '0');
+    const secs = String(now.getSeconds()).padStart(2, '0');
+    const ampm = now.getHours() >= 12 ? 'pm' : 'am';
+    
+    const fileName = `Candy.${day}.${month}.${hours}.${mins}.${secs}.${ampm}.json`;
+    
+    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backupObj));
     const link = document.createElement('a');
     link.setAttribute('href', dataUri); link.setAttribute('download', fileName);
     document.body.appendChild(link); link.click(); document.body.removeChild(link);
@@ -356,16 +418,18 @@ function restoreFromFile(event) {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = function(e) {
-        const lines = e.target.result.trim().split('\n');
-        let start = 0;
-        if (lines[0].startsWith("META|")) {
-            const m = lines[0].split('|'); lastUpdateInfo = { name: m[1], time: m[2] }; start = 1;
-        }
-        customers = lines.slice(start).map(l => {
-            const p = l.split(',');
-            return { id: parseFloat(p[3]) || Date.now() + Math.random(), name: p[0], phone: p[1] || "n", total: parseFloat(p[2]) || 0 };
-        });
-        save();
+        try {
+            const data = JSON.parse(e.target.result);
+            if (data.M) lastUpdateInfo = { name: data.M.N, time: data.M.T };
+            customers = data.D.map(item => ({
+                id: item.I || Date.now() + Math.random(),
+                name: item.C,
+                phone: item.P,
+                total: item.T,
+                history: item.H || []
+            }));
+            save();
+        } catch (err) { alert("Invalid backup format."); }
     };
     reader.readAsText(file);
 }
